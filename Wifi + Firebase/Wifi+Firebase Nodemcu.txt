@@ -1,0 +1,43 @@
+#include <FirebaseArduino.h>
+
+#include  <ESP8266WiFi.h>
+
+#define FIREBASE_HOST "example-b6df4.firebaseio.com"
+
+#define WIFI_SSID "" 
+#define WIFI_PASSWORD "" 
+String fireStatus = ""; 
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(D2, OUTPUT);
+  pinMode(D3, OUTPUT);
+  WiFi.begin (WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println ("");
+  Serial.println ("WiFi Connected!");
+  digitalWrite(D3, HIGH);
+  Firebase.begin(FIREBASE_HOST);
+}
+
+void loop() {
+  fireStatus = Firebase.getString("singhaelectronics/pr1_ch1_res/led_status");  
+  if (fireStatus == "on") {                         
+    Firebase.setString("singhaelectronics/pr1_ch1_res/res_message", "son");                     
+    digitalWrite(D2, HIGH);                                                        
+  } 
+  else if (fireStatus == "off") {  
+    Firebase.setString("singhaelectronics/pr1_ch1_res/res_message", "soff");                                                                                         
+    digitalWrite(D2, LOW);                             
+  }
+  else {
+    Serial.println("Wrong Credential! Please send ON/OFF");
+  }
+  if(WiFi.status() != WL_CONNECTED){
+    digitalWrite(D3, LOW);
+    setup();
+  }
+}
