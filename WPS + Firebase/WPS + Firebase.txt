@@ -1,0 +1,60 @@
+#include  <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
+
+#define FIREBASE_HOST "hasystem-b6df4.firebaseio.com"
+String fireStatus = ""; 
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(D2, OUTPUT);
+  pinMode(D3, OUTPUT);
+  Serial.println("\nPress WPS button on your router ...");
+  delay(1000);
+  startWPSPBC();
+}
+
+bool startWPSPBC() {
+  Serial.println("WPS config start");
+  // WPS works in STA (Station mode) only -> not working in WIFI_AP_STA !!! 
+  WiFi.mode(WIFI_STA);
+  delay(1000);
+  WiFi.begin("foobar",""); // make a failed connection
+  while (WiFi.status() == WL_DISCONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  bool wpsSuccess = WiFi.beginWPSConfig();
+  if(wpsSuccess) {
+      // Well this means not always success :-/ in case of a timeout we have an empty ssid
+      String newSSID = WiFi.SSID();
+      if(newSSID.length() > 0) {
+        // WPSConfig has already connected in STA mode successfully to the new station. 
+        Serial.printf("WPS finished. Connected successfull to SSID '%s'", newSSID.c_str());
+        digitalWrite(D3, HIGH);
+        Firebase.begin(FIREBASE_HOST);
+        // save to config and use next time or just use - WiFi.begin(WiFi.SSID().c_str(),WiFi.psk().c_str());
+        //qConfig.wifiSSID = newSSID;
+        //qConfig.wifiPWD = WiFi.psk();
+        //saveConfig();
+      } else {
+        wpsSuccess = false;
+        digitalWrite(D3, LOW);
+      }
+  }
+  return wpsSuccess; 
+}
+
+void loop() {
+  fireStatus = Firebase.getString("singhaelectronics/pr1_ch1_res/led_status");  
+  if (fireStatus == "on") {                         
+    Firebase.setString("singhaelectronics/pr1_ch1_res/res_message", "son");                     
+    digitalWrite(D2, HIGH);                                                        
+  } 
+  else if (fireStatus == "off") {  
+    Firebase.setString("singhaelectronics/pr1_ch1_res/res_message", "soff");                                                                                         
+    digitalWrite(D2, LOW);                             
+  }
+  else {
+    Serial.println("Wrong Credential! Please send ON/OFF");
+  }
+}
